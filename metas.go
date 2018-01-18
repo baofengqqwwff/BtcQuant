@@ -3,6 +3,11 @@ package BtcQuant
 type EventInterface interface {
 }
 
+/*事件类型
+  bar  新的bar
+  tick 新的tick
+  apiEvent 运用到api的事件，包括下单，取消单，获取tick等等
+*/
 //事件结构体
 type Event struct {
 	Name string      //事件名字
@@ -14,4 +19,11 @@ type Processor struct {
 	ProcessorName string       //处理器名字
 	EventName     string       //处理事件类型的名字
 	EventHandler  func(*Event) //处理事件的函数
+}
+
+type Strategy interface {
+	init()
+	onBar()
+	onTick()
+	onStart()
 }
