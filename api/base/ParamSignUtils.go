@@ -1,4 +1,4 @@
-package goex
+package api
 
 import (
 	"crypto/hmac"

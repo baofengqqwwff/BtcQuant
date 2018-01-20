@@ -1,4 +1,4 @@
-package binance
+package api
 
 import (
 	"encoding/json"
@@ -9,8 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-
-	. "github.com/baofengqqwwff/GoEx"
+	."github.com/baofengqqwwff/BtcQuant/api/base"
 	"strings"
 	"math"
 )
@@ -69,7 +68,7 @@ func (bn *Binance) getExchangeInfo() {
 		symbolPrecisonMap := map[string]int{}
 		symbolPrecisonMap["pricePrecision"] = pricePrecision
 		symbolPrecisonMap["qtyPrecision"] = qtyPrecision
-		bn.SymbolsInfo[symbolName]=symbolPrecisonMap
+		bn.SymbolsInfo[symbolName] = symbolPrecisonMap
 	}
 }
 
@@ -92,7 +91,7 @@ func (bn *Binance) buildParamsSigned(postForm *url.Values) error {
 	return nil
 }
 
-func New(client *http.Client, api_key, secret_key string) *Binance {
+func NewBinance(client *http.Client, api_key, secret_key string) *Binance {
 	binance := &Binance{api_key, secret_key, client, 0, map[string]map[string]int{}}
 	binance.getExchangeInfo()
 	binance.syncTime()
@@ -113,7 +112,7 @@ func (bn *Binance) GetTime() int64 {
 func (bn *Binance) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, error) {
 	klineUri := API_V1 + KLINNE_URI
 	params := url.Values{}
-	params.Set("symbol", currency.ToSymbol(""))
+	params.Set("symbol", currency.ToSymbol("",false))
 	if size > 0 {
 		params.Set("limit", strconv.Itoa(size))
 	}
@@ -205,7 +204,7 @@ func (bn *Binance) GetAllBookTickers() ([]*Ticker, error) {
 }
 
 func (bn *Binance) GetTicker(currency CurrencyPair) (*Ticker, error) {
-	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, currency.ToSymbol(""))
+	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, currency.ToSymbol("",false))
 	bodyDataMap, err := HttpGet(bn.httpClient, tickerUri)
 
 	if err != nil {
@@ -237,7 +236,7 @@ func (bn *Binance) GetDepth(size int, currencyPair CurrencyPair) (*Depth, error)
 		size = 5
 	}
 
-	apiUrl := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair.ToSymbol(""), size)
+	apiUrl := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair.ToSymbol("",false), size)
 	resp, err := HttpGet(bn.httpClient, apiUrl)
 	if err != nil {
 		log.Println("GetDepth error:", err)
@@ -282,7 +281,7 @@ func (bn *Binance) GetDepth(size int, currencyPair CurrencyPair) (*Depth, error)
 func (bn *Binance) placeOrder(amount, price string, pair CurrencyPair, orderType, orderSide string) (*Order, error) {
 	path := API_V3 + ORDER_URI
 	params := url.Values{}
-	params.Set("symbol", pair.ToSymbol(""))
+	params.Set("symbol", pair.ToSymbol("",false))
 	params.Set("side", orderSide)
 	params.Set("type", orderType)
 
@@ -390,7 +389,7 @@ func (bn *Binance) MarketSell(amount, price string, currencyPair CurrencyPair) (
 func (bn *Binance) CancelOrder(orderId string, currencyPair CurrencyPair) (bool, error) {
 	path := API_V3 + ORDER_URI
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol(""))
+	params.Set("symbol", currencyPair.ToSymbol("",false))
 	params.Set("orderId", orderId)
 
 	bn.buildParamsSigned(&params)
@@ -422,7 +421,7 @@ func (bn *Binance) CancelOrder(orderId string, currencyPair CurrencyPair) (bool,
 
 func (bn *Binance) GetOneOrder(orderId string, currencyPair CurrencyPair) (*Order, error) {
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol(""))
+	params.Set("symbol", currencyPair.ToSymbol("",false))
 	params.Set("orderId", orderId)
 
 	bn.buildParamsSigned(&params)
@@ -456,7 +455,7 @@ func (bn *Binance) GetOneOrder(orderId string, currencyPair CurrencyPair) (*Orde
 
 func (bn *Binance) GetUnfinishOrders(currencyPair CurrencyPair) ([]Order, error) {
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol(""))
+	params.Set("symbol", currencyPair.ToSymbol("",false))
 
 	bn.buildParamsSigned(&params)
 	path := API_V3 + UNFINISHED_ORDERS_INFO + params.Encode()
@@ -494,7 +493,7 @@ func (bn *Binance) GetUnfinishOrders(currencyPair CurrencyPair) ([]Order, error)
 
 func (bn *Binance) GetAllOrders(currencyPair CurrencyPair) ([]Order, error) {
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol(""))
+	params.Set("symbol", currencyPair.ToSymbol("",false))
 
 	bn.buildParamsSigned(&params)
 	path := API_V3 + ALL_ORDERS + params.Encode()

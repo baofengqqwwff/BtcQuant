@@ -1,4 +1,4 @@
-package goex
+package api
 
 //http request 工具函数
 import (
