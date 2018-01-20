@@ -1,7 +1,6 @@
 package main
 
 import (
-	. "github.com/baofengqqwwff/BtcQuant"
 	"sync"
 	"time"
 	"log"

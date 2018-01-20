@@ -1,10 +1,10 @@
-package BtcQuant
+package engine
 
 import (
 	"container/list"
 	"github.com/pkg/errors"
-	"time"
 	"log"
+	"time"
 )
 
 type Engine struct {
