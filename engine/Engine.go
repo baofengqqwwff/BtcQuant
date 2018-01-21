@@ -71,7 +71,7 @@ func (engine *Engine) processEvent(event *Event) {
 
 //注册处理器
 func (engine *Engine) RegisterProcessor(processor *Processor) {
-	log.Println("注册了处理器")
+	log.Println("注册了处理器:"+processor.ProcessorName)
 	engine.Processor.PushBack(processor)
 }
 
