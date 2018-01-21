@@ -53,7 +53,18 @@ func (engine *Engine) processEvent(event *Event) {
 	for selectProcessorElem := engine.Processor.Front(); selectProcessorElem != nil; selectProcessorElem = selectProcessorElem.Next() {
 		selectProcessor, _ := selectProcessorElem.Value.(*Processor)
 		if selectProcessor.EventName == event.Name {
-			selectProcessor.EventHandler(event)
+			//日志记录每个请求
+			engine.PutEvent(&Event{Name: "logEvent", Data: event})
+
+			event, err := selectProcessor.EventHandler(event)
+			//错误处理
+			if err != nil {
+				engine.PutEvent(&Event{Name: "logEvent", Data: err})
+			}
+			//如果返回数据再次推送
+			if err == nil && event != nil {
+				engine.PutEvent(event)
+			}
 		}
 	}
 }

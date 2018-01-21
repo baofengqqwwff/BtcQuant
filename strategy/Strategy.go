@@ -1,15 +1,13 @@
 package strategy
 
 import (
-	"github.com/baofengqqwwff/BtcQuant/api/base"
 	"github.com/baofengqqwwff/BtcQuant/engine"
 	"strings"
-	api2 "github.com/baofengqqwwff/BtcQuant/api"
+	"github.com/baofengqqwwff/BtcQuant/api"
 )
 
 type Strategy struct {
 	name   string
-	apis   []api.API
 	engine *engine.Engine
 	onBar  func(bar *engine.Event)
 	onTick func(tick *engine.Event)
@@ -51,14 +49,13 @@ func NewStrategy(argsMap map[string]interface{}) *Strategy {
 		for _, apiName := range apisList {
 			switch strings.ToUpper(apiName) {
 			case "BINANCE":
-				strategy.registerApi(api2.Binance{})
+				{
+					api.RigisterBinance(strategy.engine)
+				}
 			}
 		}
-	}
-	strategy.init()
-	return strategy
-}
+		strategy.init()
 
-func (strategy *Strategy) registerApi (api *api.API){
-	strategy.apis = append(strategy.apis,api)
+	}
+	return strategy
 }
