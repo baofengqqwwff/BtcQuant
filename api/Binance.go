@@ -106,14 +106,14 @@ func RigisterBinance(engine *engine.Engine) {
 }
 
 //把api的请求转发
-func apiWrapper(event *engine.Event)(*engine.Event,error) {
-	return nil,nil
+func apiWrapper(event *engine.Event) (*engine.Event, error) {
+	return nil, nil
 }
-
 
 func (bn *Binance) GetExchangeName() string {
 	return EXCHANGE_NAME
 }
+
 func (bn *Binance) GetTime() int64 {
 	timeUri := API_V1 + TIME_URI
 	bodyDataMap, _ := HttpGet(bn.httpClient, timeUri)
