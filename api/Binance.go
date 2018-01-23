@@ -100,9 +100,9 @@ func NewBinance(client *http.Client, api_key, secret_key string) *Binance {
 }
 
 //注册binance的相关processor
-func RigisterBinance(engine *engine.Engine) {
-	engine.RegisterProcessor(&engine.Processor{"binanceApi", "apiEvent", apiWrapper})
-	engine.RegisterProcessor(&engine.Processor{"binanceTimer", "timer", apiWrapper})
+func RigisterBinance(engine_ *engine.Engine) {
+	engine_.RegisterProcessor(&engine.Processor{"binanceApi", "apiEvent", apiWrapper})
+	engine_.RegisterProcessor(&engine.Processor{"binanceTimer", "timer", apiWrapper})
 }
 
 //把api的请求转发

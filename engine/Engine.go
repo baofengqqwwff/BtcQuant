@@ -16,6 +16,7 @@ type Engine struct {
 func NewEngine() *Engine {
 	engine := &Engine{list.New(), list.New(), time.Second}
 	engine.engineStart()
+	engine.RegisterProcessor(&Processor{ProcessorName: "logProcessor", EventName: "logEvent", EventHandler: LogHandler})
 	engine.startPutTimeEvent()
 	return engine
 }
@@ -50,11 +51,14 @@ func (engine *Engine) PutEvent(event *Event) {
 
 //处理事件
 func (engine *Engine) processEvent(event *Event) {
+
 	for selectProcessorElem := engine.Processor.Front(); selectProcessorElem != nil; selectProcessorElem = selectProcessorElem.Next() {
 		selectProcessor, _ := selectProcessorElem.Value.(*Processor)
 		if selectProcessor.EventName == event.Name {
-			//日志记录每个请求
-			engine.PutEvent(&Event{Name: "logEvent", Data: event})
+			//日志记录每个请求,推送所有除了日志的事件信息
+			if event.Name!="logEvent"{
+				engine.PutEvent(&Event{Name: "logEvent", Data: event})
+			}
 
 			event, err := selectProcessor.EventHandler(event)
 			//错误处理
@@ -71,7 +75,7 @@ func (engine *Engine) processEvent(event *Event) {
 
 //注册处理器
 func (engine *Engine) RegisterProcessor(processor *Processor) {
-	log.Println("注册了处理器:"+processor.ProcessorName)
+	log.Println("注册了处理器:" + processor.ProcessorName)
 	engine.Processor.PushBack(processor)
 }
 
