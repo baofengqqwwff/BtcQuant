@@ -107,6 +107,9 @@ func RigisterBinance(engine_ *engine.Engine) {
 
 //把api的请求转发
 func apiWrapper(event *engine.Event) (*engine.Event, error) {
+	if event.Name=="timer"{
+		log.Println("BinanceTimer")
+	}
 	return nil, nil
 }
 

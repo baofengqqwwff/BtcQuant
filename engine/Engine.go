@@ -57,7 +57,7 @@ func (engine *Engine) processEvent(event *Event) {
 		if selectProcessor.EventName == event.Name {
 			//日志记录每个请求,推送所有除了日志的事件信息
 			if event.Name!="logEvent"{
-				engine.PutEvent(&Event{Name: "logEvent", Data: event})
+				engine.PutEvent(&Event{Name: "logEvent", Data: *event})
 			}
 
 			event, err := selectProcessor.EventHandler(event)
@@ -97,7 +97,7 @@ func (engine *Engine) startPutTimeEvent() {
 		for {
 			time.Sleep(engine.TimeInterval)
 			log.Println("定时器推送事件")
-			engine.PutEvent(&Event{Name: "Timer", Data: time.Now()})
+			engine.PutEvent(&Event{Name: "timer", Data: time.Now()})
 		}
 	}()
 }
