@@ -3,7 +3,6 @@ package engine
 import (
 	"container/list"
 	"github.com/pkg/errors"
-	"log"
 	"time"
 )
 
@@ -15,15 +14,15 @@ type Engine struct {
 
 func NewEngine() *Engine {
 	engine := &Engine{list.New(), list.New(), time.Second}
-	engine.engineStart()
 	engine.RegisterProcessor(&Processor{ProcessorName: "logProcessor", EventName: "logEvent", EventHandler: LogHandler})
 	engine.startPutTimeEvent()
+	engine.engineStart()
 	return engine
 }
 
 //启动引擎
 func (engine *Engine) engineStart() {
-	log.Println("引擎启动")
+	engine.PutEvent(&Event{Name: "logEvent", Data: "引擎启动"})
 	go func() {
 		for {
 			eventElem := engine.Event.Front()
@@ -56,7 +55,7 @@ func (engine *Engine) processEvent(event *Event) {
 		selectProcessor, _ := selectProcessorElem.Value.(*Processor)
 		if selectProcessor.EventName == event.Name {
 			//日志记录每个请求,推送所有除了日志的事件信息
-			if event.Name!="logEvent"{
+			if event.Name != "logEvent" {
 				engine.PutEvent(&Event{Name: "logEvent", Data: *event})
 			}
 
@@ -74,9 +73,18 @@ func (engine *Engine) processEvent(event *Event) {
 }
 
 //注册处理器
-func (engine *Engine) RegisterProcessor(processor *Processor) {
-	log.Println("注册了处理器:" + processor.ProcessorName)
+func (engine *Engine) RegisterProcessor(processor *Processor) error {
+
+	for selectProcessorElem := engine.Processor.Front(); selectProcessorElem != nil; selectProcessorElem = selectProcessorElem.Next() {
+		selectProcessor, _ := selectProcessorElem.Value.(*Processor)
+		if selectProcessor.ProcessorName == processor.ProcessorName {
+			engine.PutEvent(&Event{Name: "logEvent", Data: processor.ProcessorName + "注册失败"})
+			return errors.New("ProcessorName has been registered")
+		}
+	}
 	engine.Processor.PushBack(processor)
+	engine.PutEvent(&Event{Name: "logEvent", Data: "注册了处理器:" + processor.ProcessorName})
+	return nil
 }
 
 //注销处理器
@@ -96,7 +104,7 @@ func (engine *Engine) startPutTimeEvent() {
 	go func() {
 		for {
 			time.Sleep(engine.TimeInterval)
-			log.Println("定时器推送事件")
+			engine.PutEvent(&Event{Name: "logEvent", Data: "定时器推送事件"})
 			engine.PutEvent(&Event{Name: "timer", Data: time.Now()})
 		}
 	}()
