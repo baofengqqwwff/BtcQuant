@@ -1,4 +1,4 @@
-package api
+package goex
 
 //http request 工具函数
 import (
@@ -73,7 +73,6 @@ func HttpGet2(client *http.Client, reqUrl string, headers map[string]string) (ma
 	headers["Content-Type"] = "application/x-www-form-urlencoded"
 	respData, err := NewHttpRequest(client, "GET", reqUrl, "", headers)
 	if err != nil {
-
 		return nil, err
 	}
 

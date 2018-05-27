@@ -1,4 +1,4 @@
-package api
+package goex
 
 import (
 	"strconv"

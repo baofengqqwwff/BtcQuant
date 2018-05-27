@@ -1,4 +1,4 @@
-package api
+package binance
 
 import (
 	"encoding/json"
@@ -9,16 +9,16 @@ import (
 	"net/url"
 	"strconv"
 	"time"
-	. "github.com/baofengqqwwff/BtcQuant/api/base"
-	"strings"
+
+	. "BTCCandle/GoEx"
 	"math"
-	"github.com/baofengqqwwff/BtcQuant/engine"
+	"strings"
 )
 
 const (
 	EXCHANGE_NAME = "binance.com"
 
-	API_BASE_URL = "https://www.binance.com/"
+	API_BASE_URL = "https://api.binance.com/"
 	API_V1       = API_BASE_URL + "api/v1/"
 	API_V3       = API_BASE_URL + "api/v3/"
 
@@ -42,11 +42,29 @@ type Binance struct {
 	SymbolsInfo map[string]map[string]int //记录开仓的最小小数点
 }
 
+func (bn *Binance)GetSymbols()([]CurrencyPair,error){
+	exchangeInfoUri := API_V1 + EXCHANGEINFO_URI
+	bodyDataMap, err := HttpGet(bn.httpClient, exchangeInfoUri)
+	if err != nil {
+		return nil,err
+	}
+	symbols := []CurrencyPair{}
+	symbolsInfo, _ := bodyDataMap["symbols"].([]interface{})
+	for _, infoInterface := range symbolsInfo {
+		info, _ := infoInterface.(interface{})
+		symbolInfo, _ := info.(map[string]interface{})
+		symbols = append(symbols,NewCurrencyPair2(symbolInfo["baseAsset"].(string)+"_"+symbolInfo["quoteAsset"].(string)))
+	}
+	return symbols,nil
+}
+
 func (bn *Binance) getExchangeInfo() {
 	exchangeInfoUri := API_V1 + EXCHANGEINFO_URI
 	bodyDataMap, err := HttpGet(bn.httpClient, exchangeInfoUri)
 	if err != nil {
-		log.Fatal("初始化失败")
+		log.Println("binance初始化失败，重试中")
+		time.Sleep(2*time.Second)
+		bn.getExchangeInfo()
 		return
 	}
 	symbolsInfo, _ := bodyDataMap["symbols"].([]interface{})
@@ -92,31 +110,15 @@ func (bn *Binance) buildParamsSigned(postForm *url.Values) error {
 	return nil
 }
 
-func NewBinance(client *http.Client, api_key, secret_key string) *Binance {
+func New(client *http.Client, api_key, secret_key string) *Binance {
 	binance := &Binance{api_key, secret_key, client, 0, map[string]map[string]int{}}
 	binance.getExchangeInfo()
-	binance.syncTime()
 	return binance
-}
-
-//注册binance的相关processor
-func RigisterBinance(engine_ *engine.Engine) {
-	engine_.RegisterProcessor(&engine.Processor{"binanceApi", "apiEvent", apiWrapper})
-	engine_.RegisterProcessor(&engine.Processor{"binanceTimer", "timer", apiWrapper})
-}
-
-//把api的请求转发
-func apiWrapper(event *engine.Event) (*engine.Event, error) {
-	if event.Name=="timer"{
-		log.Println("BinanceTimer")
-	}
-	return nil, nil
 }
 
 func (bn *Binance) GetExchangeName() string {
 	return EXCHANGE_NAME
 }
-
 func (bn *Binance) GetTime() int64 {
 	timeUri := API_V1 + TIME_URI
 	bodyDataMap, _ := HttpGet(bn.httpClient, timeUri)
@@ -125,49 +127,52 @@ func (bn *Binance) GetTime() int64 {
 
 }
 
-//非个人，整个交易所的交易记录
-func (bn *Binance) GetTrades(currencyPair CurrencyPair, since int64) ([]Trade, error) {
-	panic("not implements")
-}
-
 func (bn *Binance) GetKlineRecords(currency CurrencyPair, period, size, since int) ([]Kline, error) {
 	klineUri := API_V1 + KLINNE_URI
 	params := url.Values{}
-	params.Set("symbol", currency.ToSymbol("", false))
+	params.Set("symbol", currency.ToSymbol(""))
 	if size > 0 {
 		params.Set("limit", strconv.Itoa(size))
 	}
 	if since > 0 {
 		params.Set("startTime", strconv.Itoa(since))
 	}
+	var _period string
 	switch period {
 	case KLINE_PERIOD_1MIN:
 		{
 			params.Set("interval", "1m")
+			_period = "1m"
 		}
 	case KLINE_PERIOD_5MIN:
 		{
 			params.Set("interval", "5m")
+			_period = "5m"
 		}
 	case KLINE_PERIOD_15MIN:
 		{
 			params.Set("interval", "15m")
+			_period = "15m"
 		}
 	case KLINE_PERIOD_30MIN:
 		{
 			params.Set("interval", "30m")
+			_period = "30m"
 		}
 	case KLINE_PERIOD_60MIN:
 		{
 			params.Set("interval", "1h")
+			_period = "1h"
 		}
 	case KLINE_PERIOD_4H:
 		{
 			params.Set("interval", "4h")
+			_period = "4h"
 		}
 	case KLINE_PERIOD_1DAY:
 		{
 			params.Set("interval", "1d")
+			_period = "1d"
 		}
 	default:
 		return nil, errors.New("do not have this period")
@@ -186,7 +191,9 @@ func (bn *Binance) GetKlineRecords(currency CurrencyPair, period, size, since in
 	for _, resp := range respList {
 		kline := Kline{}
 		respBodyList, _ := resp.([]interface{})
+		kline.Symbol = currency.ToSymbol("_")
 		kline.Timestamp = int64(respBodyList[0].(float64))
+		kline.Period = _period
 		kline.Open, _ = strconv.ParseFloat(respBodyList[1].(string), 64)
 		kline.High, _ = strconv.ParseFloat(respBodyList[2].(string), 64)
 		kline.Low, _ = strconv.ParseFloat(respBodyList[3].(string), 64)
@@ -201,6 +208,9 @@ func (bn *Binance) GetAllBookTickers() ([]*Ticker, error) {
 	tickerUri := API_V1 + TICKERS_URI
 	//bodyDataMapList, err := HttpGet3(bn.httpClient, tickerUri,nil)
 	respData, err := NewHttpRequest(bn.httpClient, "GET", tickerUri, "", nil)
+	if err!=nil{
+		return nil,err
+	}
 	var bodyDataMapList []interface{}
 	err = json.Unmarshal(respData, &bodyDataMapList)
 	if err != nil {
@@ -225,7 +235,7 @@ func (bn *Binance) GetAllBookTickers() ([]*Ticker, error) {
 }
 
 func (bn *Binance) GetTicker(currency CurrencyPair) (*Ticker, error) {
-	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, currency.ToSymbol("", false))
+	tickerUri := API_V1 + fmt.Sprintf(TICKER_URI, currency.ToSymbol(""))
 	bodyDataMap, err := HttpGet(bn.httpClient, tickerUri)
 
 	if err != nil {
@@ -257,7 +267,7 @@ func (bn *Binance) GetDepth(size int, currencyPair CurrencyPair) (*Depth, error)
 		size = 5
 	}
 
-	apiUrl := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair.ToSymbol("", false), size)
+	apiUrl := fmt.Sprintf(API_V1+DEPTH_URI, currencyPair.ToSymbol(""), size)
 	resp, err := HttpGet(bn.httpClient, apiUrl)
 	if err != nil {
 		log.Println("GetDepth error:", err)
@@ -302,7 +312,7 @@ func (bn *Binance) GetDepth(size int, currencyPair CurrencyPair) (*Depth, error)
 func (bn *Binance) placeOrder(amount, price string, pair CurrencyPair, orderType, orderSide string) (*Order, error) {
 	path := API_V3 + ORDER_URI
 	params := url.Values{}
-	params.Set("symbol", pair.ToSymbol("", false))
+	params.Set("symbol", pair.ToSymbol(""))
 	params.Set("side", orderSide)
 	params.Set("type", orderType)
 
@@ -410,7 +420,7 @@ func (bn *Binance) MarketSell(amount, price string, currencyPair CurrencyPair) (
 func (bn *Binance) CancelOrder(orderId string, currencyPair CurrencyPair) (bool, error) {
 	path := API_V3 + ORDER_URI
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol("", false))
+	params.Set("symbol", currencyPair.ToSymbol(""))
 	params.Set("orderId", orderId)
 
 	bn.buildParamsSigned(&params)
@@ -442,7 +452,7 @@ func (bn *Binance) CancelOrder(orderId string, currencyPair CurrencyPair) (bool,
 
 func (bn *Binance) GetOneOrder(orderId string, currencyPair CurrencyPair) (*Order, error) {
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol("", false))
+	params.Set("symbol", currencyPair.ToSymbol(""))
 	params.Set("orderId", orderId)
 
 	bn.buildParamsSigned(&params)
@@ -476,7 +486,7 @@ func (bn *Binance) GetOneOrder(orderId string, currencyPair CurrencyPair) (*Orde
 
 func (bn *Binance) GetUnfinishOrders(currencyPair CurrencyPair) ([]Order, error) {
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol("", false))
+	params.Set("symbol", currencyPair.ToSymbol(""))
 
 	bn.buildParamsSigned(&params)
 	path := API_V3 + UNFINISHED_ORDERS_INFO + params.Encode()
@@ -511,12 +521,10 @@ func (bn *Binance) GetUnfinishOrders(currencyPair CurrencyPair) ([]Order, error)
 	}
 	return orders, nil
 }
-func (bn *Binance) GetOrderHistorys(currency CurrencyPair, currentPage, pageSize int) ([]Order, error) {
-	panic("not implements")
-}
+
 func (bn *Binance) GetAllOrders(currencyPair CurrencyPair) ([]Order, error) {
 	params := url.Values{}
-	params.Set("symbol", currencyPair.ToSymbol("", false))
+	params.Set("symbol", currencyPair.ToSymbol(""))
 
 	bn.buildParamsSigned(&params)
 	path := API_V3 + ALL_ORDERS + params.Encode()

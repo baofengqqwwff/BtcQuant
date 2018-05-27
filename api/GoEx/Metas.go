@@ -1,8 +1,6 @@
-package api
+package goex
 
-import (
-	"net/http"
-)
+import "net/http"
 
 type Order struct {
 	Price,
@@ -41,14 +39,14 @@ type Account struct {
 }
 
 type Ticker struct {
-	Last   float64 `json:"last"`
-	Buy    float64 `json:"buy"`
-	Sell   float64 `json:"sell"`
-	High   float64 `json:"high"`
-	Low    float64 `json:"low"`
-	Vol    float64 `json:"vol"`
-	Date   uint64  `json:"date"`
-	Symbol string  `json:"symbol"`
+	Symbol string `json:"symbol"`
+	Last float64 `json:"last"`
+	Buy  float64 `json:"buy"`
+	Sell float64 `json:"sell"`
+	High float64 `json:"high"`
+	Low  float64 `json:"low"`
+	Vol  float64 `json:"vol"`
+	Date uint64  `json:"date"` // 单位:秒(second)
 }
 
 type DepthRecord struct {
@@ -83,6 +81,8 @@ type APIConfig struct {
 }
 
 type Kline struct {
+	Symbol string
+	Period string
 	Timestamp int64
 	Open,
 	Close,
